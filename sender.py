@@ -4,10 +4,8 @@
 import sys, socket
 
 socket = socket.socket()
-sender_args = {}
 
-#for arg in range(1, len(sys.argv)): #for now assume there will be 8 args
-
+#for now assume there will be 8 args
 sender_args = {"reciever_ip":str(sys.argv[1]), 
 			   "reciever_port":str(sys.argv[2]),
 			   "file":str(sys.argv[3]),
@@ -18,4 +16,5 @@ sender_args = {"reciever_ip":str(sys.argv[1]),
 			   "seed":str(sys.argv[8])
 			  }
 
-print sender_args
+for arg in sender_args:
+	print arg
