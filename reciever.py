@@ -27,14 +27,18 @@ while not sender["connected"]:
 
 	if mess.response["SYN"] and sender["port"] != 0 and addr[1] == sender["port"]:
 		sender["connected"] == True
+		print "Connection made"
 	elif mess.response["SYN"] and sender["port"] != 0:
 		pass
 	elif mess.response["SYN"] and sender["port"] == 0:
 	    sender["port"] = addr[1]
 	    mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], "0", "0", "", "ACK"))  # no source port
 	    s.sendto(mess.segment(), addr)
+		 
  
 print "new loop"
+# scrape sender ip and/or port from UDP header
+
 
 while True:
     
@@ -44,13 +48,9 @@ while True:
 	mess.parse_segment(data)
 	print mess.segment() 
 
-
-	if not data: 
-		break
-     
 	reply = 'OK...' + data
      
-	s.sendto(reply , addr)
+	s.sendto(mess.segment(), addr)
 	#print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
      
 s.close()
