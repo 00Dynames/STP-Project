@@ -49,7 +49,6 @@ while not reciever["connected"]:
 
 """
 Send file
-Constantly time out rn, reciever doesn't return correct response
 """
 
 f = open(sender_args["file"], "r")
@@ -57,18 +56,22 @@ window = {"start":0, "end":0}
 file_size = len(f.read())
 f.seek(0)
 
-while f.tell() <= file_size:
+while True:
 
-	print f.tell(), f.read(sender_args["MSS"]), random.random()
+	#print f.read(sender_args["MSS"]), random.random()
+ 	print f.tell()
+
+
+	mess = message.Message([reciever["port"], 0, 0, f.read(sender_args["MSS"])])
 
 	try:
 		start = time.time()
-		sender_socket.sendto("qwerew:QWERQWER:QWERQWER:QWERQWER:QWERQWER", dest)
+		sender_socket.sendto(mess.segment(), dest)
 		
 		data, server = sender_socket.recvfrom(dest[1])
 
-		while not data:
-			data, server = sender_socket.recvfrom(dest[1])
+		#while not data:
+		#	data, server = sender_socket.recvfrom(dest[1])
 
 
 
@@ -78,12 +81,20 @@ while f.tell() <= file_size:
 		print mess.segment()
 		#print "[" +data + "] -> "+ "RTT = " + str(int((end - start) * 1000)) + "ms"
 		
+		
 		time.sleep(1 - (time.time() - start))
-
+		if f.tell() == file_size:
+			break
 
 	except socket.timeout:
 		print "timeout"
-		
+
+"""
+Close connection
+"""
+
+
 
 f.close()
+print "sent"
 #print "RTT min/avg/max = {}/{}/{} ms".format(str(int(min(RTT))), str(int(sum(RTT)/len(RTT))), str(int(max(RTT)))) 

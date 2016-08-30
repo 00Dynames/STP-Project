@@ -7,7 +7,7 @@ Parse incoming data strings into nice object format
 """
 class Message:
 
-	# content -> (source, dest, seq, ack, data) <- required, ACK, SYN, FIN 
+	# content -> (source, dest, seq, data, ack/syn/fin) <- required, ACK, SYN, FIN 
 	def __init__(self, content):
 		#source_port = content[0]
 		if len(content) == 0:
@@ -51,3 +51,5 @@ class Message:
 		
 		return data
 
+	def add_ack(self):
+		self.response["ACK"] = True
