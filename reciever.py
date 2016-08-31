@@ -6,6 +6,9 @@ HOST = '127.0.0.1'
 PORT = int(sys.argv[1])
 sender = {"connected":False, "port":0}
 
+"""
+Bind socket
+"""
 try :
 	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	s.bind((HOST, PORT))
@@ -22,7 +25,7 @@ while not sender["connected"]:
 	try:
 		data, addr = s.recvfrom(PORT)
 	
-		mess = message.Message([]) # Message(mess.parse_segment(data))
+		mess = message.Message([]) 
 		mess.parse_segment(data)
 
 		print mess.segment() 
@@ -33,10 +36,11 @@ while not sender["connected"]:
 			break
 		elif mess.response["SYN"] and sender["port"] != 0:
 			pass
-		elif mess.response["SYN"] and sender["port"] == 0:
+		elif mess.response["SYN"] and sender["port"] == 0: # does not check ACK flag
 			sender["port"] = addr[1]
-	    	mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], "0", "0", "", "ACK"))  # no source port
+	    	mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], "0", "0", "", "ACK", "SYN"))  # no source port, SYN-ACK segment
 	    	s.sendto(mess.segment(), addr)
+
 	except socket.timeout:
 		print "timeout"
  
@@ -54,9 +58,11 @@ while True:
 
 
 		reply = 'OK...' + data
-         
-		mess.add_ack() 
-		print mess.segment() 
+		
+		
+
+		mess.add_ack(int(mess.seq_num) + 1)
+		print mess.segment(), addr 
 		s.sendto(mess.segment(), addr)
 		#print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
 	except socket.timeout:
