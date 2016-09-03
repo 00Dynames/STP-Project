@@ -40,8 +40,8 @@ while not reciever["connected"]:
 	
 		mess.parse_segment(data) 
 		
-		if mess.response["ACK"] and mess.response["SYN"] and mess.ack_num == sender_args["isn"]: # recieve SYN-ACK segment
-			print mess.segment()
+		if mess.response["ACK"] and mess.response["SYN"] and mess.ack_num == sender_args["isn"] + 1: # recieve SYN-ACK segment
+			print "ACK:SYN", mess.segment()
 
 			reciever["isn"] = mess.seq_num
 
@@ -52,6 +52,8 @@ while not reciever["connected"]:
 	except socket.timeout:
 		pass
 
+
+print "===> SEND FILE <==="
 
 """
 Send file

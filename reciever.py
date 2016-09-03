@@ -1,18 +1,20 @@
 #!/usr/bin/python
 
-import socket, sys, message
+import socket, sys, message, random
  
 HOST = '127.0.0.1'
 PORT = int(sys.argv[1])
-sender = {"connected":False, "port":0}
+sender = {"connected":False, "port":0, "isn": 0}
+reciever = {"isn": int(random.random())}
+
 
 """
 Bind socket
 """
 try :
-	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	s.bind((HOST, PORT))
-	s.settimeout(1)
+	reciever_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	reciever_socket.bind((HOST, PORT))
+	reciever_socket.settimeout(1)
 except socket.error , msg:
     print 'failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
     sys.exit()
@@ -23,50 +25,49 @@ Listen for handshake
 while not sender["connected"]:
 
 	try:
-		data, addr = s.recvfrom(PORT)
+		data, addr = reciever_socket.recvfrom(PORT)
 	
 		mess = message.Message([]) 
 		mess.parse_segment(data)
 
 		print mess.segment() 
 
-		if mess.response["SYN"] and sender["port"] != 0 and addr[1] == sender["port"]:
+		if mess.response["ACK"] and sender["port"] != 0 and mess.ack_num == reciever["isn"] + 1:
 			sender["connected"] == True
 			print "Connection made"
 			break
-		elif mess.response["SYN"] and sender["port"] != 0:
+		elif mess.response["SYN"] and sender["port"] != 0: # syn segment sent when connected
 			pass
 		elif mess.response["SYN"] and sender["port"] == 0: # does not check ACK flag
+			print "start connecting"
 			sender["port"] = addr[1]
-	    	mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], "0", "0", "", "ACK", "SYN"))  # no source port, SYN-ACK segment
-	    	s.sendto(mess.segment(), addr)
+			sender["isn"] = mess.seq_num
+	    	mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["isn"] + 1, "", "ACK", "SYN"))  # no source port, SYN-ACK segment
+	    	reciever_socket.sendto(mess.segment(), addr)
 
 	except socket.timeout:
 		print "timeout"
  
-print "new loop"
+print "==> RECIEVE FILE <==="
+
 # scrape sender ip and/or port from UDP header
 
 
 while True:
 	
 	try:
-		data, addr = s.recvfrom(2200)
+		data, addr = reciever_socket.recvfrom(2200)
 
 		mess = message.Message([]) # Message(mess.parse_segment(data))
 		mess.parse_segment(data)
 
 
-		reply = 'OK...' + data
-		
-		
-
 		mess.add_ack(int(mess.seq_num) + 1)
-		print mess.segment(), addr 
-		s.sendto(mess.segment(), addr)
+		print mess.segment(), addr, " ==> send" 
+		reciever_socket.sendto(mess.segment(), addr)
 		#print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
 	except socket.timeout:
 		print "timeout"
 
-s.close()
+reciever_socket.close()
 

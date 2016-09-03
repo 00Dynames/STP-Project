@@ -16,9 +16,9 @@ class Message:
 			self.ack_num = 0
 			self.data = ""
 		else:		
-			self.destination_port = content[0]
-			self.seq_num = content[1]
-			self.ack_num = content[2]
+			self.destination_port = int(content[0])
+			self.seq_num = int(content[1])
+			self.ack_num = int(content[2])
 			self.data = content[3]
 
 		self.response = {"ACK": False, "SYN": False, "FIN": False} # maybe able to work in as bits later in needed
