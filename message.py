@@ -7,7 +7,7 @@ Parse incoming data strings into nice object format
 """
 class Message:
 
-	# content -> (source, dest, seqn, ackn, data, ack/syn/fin) <- required, ACK, SYN, FIN 
+	# content -> (dest, seqn, ackn, data, ack/syn/fin) <- required, ACK, SYN, FIN 
 	def __init__(self, content):
 		#source_port = content[0]
 		if len(content) == 0:

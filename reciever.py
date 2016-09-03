@@ -4,8 +4,8 @@ import socket, sys, message, random
  
 HOST = '127.0.0.1'
 PORT = int(sys.argv[1])
-sender = {"connected":False, "port":0, "isn": 0}
-reciever = {"isn": int(random.random())}
+sender = {"connected":False, "port":0, "isn": 0, "csn":0}
+reciever = {"isn": int(random.random() * 100)}
 
 
 """
@@ -42,7 +42,8 @@ while not sender["connected"]:
 			print "start connecting"
 			sender["port"] = addr[1]
 			sender["isn"] = mess.seq_num
-	    	mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["isn"] + 1, "", "ACK", "SYN"))  # no source port, SYN-ACK segment
+			sender["csn"] = mess.seq_num + 1
+	    	mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"], "", "ACK", "SYN"))  # no source port, SYN-ACK segment
 	    	reciever_socket.sendto(mess.segment(), addr)
 
 	except socket.timeout:
@@ -52,22 +53,36 @@ print "==> RECIEVE FILE <==="
 
 # scrape sender ip and/or port from UDP header
 
+"""
+Recieve file
+"""
 
 while True:
 	
 	try:
 		data, addr = reciever_socket.recvfrom(2200)
 
-		mess = message.Message([]) # Message(mess.parse_segment(data))
 		mess.parse_segment(data)
 
+		if mess.response["FIN"]:
+			break
+		sender["csn"] = mess.seq_num
 
-		mess.add_ack(int(mess.seq_num) + 1)
-		print mess.segment(), addr, " ==> send" 
+		print mess.segment() 
+		mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
 		reciever_socket.sendto(mess.segment(), addr)
 		#print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
 	except socket.timeout:
 		print "timeout"
+
+print "===> CLOSING CONNECTION <==="
+
+"""
+Close connection
+"""
+
+
+
 
 reciever_socket.close()
 
