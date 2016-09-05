@@ -106,26 +106,35 @@ while True:
 Close connection
 """
 
+fin_start = True
+
 while reciever["connected"]:
 	
-
 	try:
-		mess = message.Message([reciever["address"][1], 0, 0,"", "FIN"])
-		sender_socket.sendto(mess.segment(), reciever["address"])
-
-		data, server = sender_socket.recvfrom(reciever["address"][1])
+		if fin_start:
+			print "fin start"
+			mess = message.Message([reciever["address"][1], sender["csn"], 0,"", "FIN"]) # NEED TO ONLY SEND ONCE
+			sender_socket.sendto(mess.segment(), reciever["address"]) # send initial fin
 		
+		data, server = sender_socket.recvfrom(reciever["address"][1])
 		mess.parse_segment(data)
-
-		if mess.responses["FIN"]:
-			print "FIN!!!!"
-		else:
-			pass
+		
+		if mess.response["FIN"]: # recieve reciever fin
+			print "fin recieved"
+			mess.parse_segment("%s:%s:%s:%s:%s" % (reciever["address"][1], 0, reciever["isn"] + 1, "", "ACK"))
+			sender_socket.sendto(mess.segment(), reciever["address"]) # send ack to reciever
+			fin_start = False			
+			print reciever["isn"] + 1 
+			time.sleep(2)
+			reciever["connected"] = False
+		elif mess.response["ACK"] and mess.ack_num == sender["csn"] + 1: # recieve initial ack
+			print "fin success"
+			fin_start = False
 
 	except socket.timeout:
 		pass
 	
-	print "fin"
+
 
 
 

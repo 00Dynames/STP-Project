@@ -33,8 +33,8 @@ while not sender["connected"]:
 		print mess.segment() 
 
 		if mess.response["ACK"] and sender["port"] != 0 and mess.ack_num == reciever["isn"] + 1:
-			sender["connected"] == True
-			print "Connection made"
+			sender["connected"] = True
+			print "Connection made + ", sender["connected"]
 			break
 		elif mess.response["SYN"] and sender["port"] != 0: # syn segment sent when connected
 			pass
@@ -63,11 +63,14 @@ while True:
 		data, addr = reciever_socket.recvfrom(2200)
 
 		mess.parse_segment(data)
-
-		if mess.response["FIN"]:
-			break
 		sender["csn"] = mess.seq_num
 
+		if mess.response["FIN"]: # acknowledge sender fin
+			mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, sender["csn"] + 1, "", "ACK"))
+			reciever_socket.sendto(mess.segment(), addr) # send ack
+			break
+	
+		
 		print mess.segment() 
 		mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
 		reciever_socket.sendto(mess.segment(), addr)
@@ -76,10 +79,32 @@ while True:
 		print "timeout"
 
 print "===> CLOSING CONNECTION <==="
-
+print sender["connected"]
 """
 Close connection
 """
+
+while sender["connected"]:
+
+	print "closing connection"
+
+	try: # send reciever fin
+		mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, reciever["isn"], "", "FIN"))
+		reciever_socket.sendto(mess.segment(), addr)
+		
+		data, addr = reciever_socket.recvfrom(2200)
+		mess.parse_segment(data)
+
+		print reciever["isn"]
+		if mess.response["ACK"] and mess.ack_num == reciever["isn"] + 1: # recieve ack
+			print "CLOSE"
+			sender["connected"] = False
+
+
+
+	except socket.timeout:
+		print "timeout"
+ 
 
 
 
