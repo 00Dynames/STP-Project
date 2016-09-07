@@ -54,3 +54,9 @@ class Message:
 	def add_ack(self, num):
 		self.response["ACK"] = True
 		self.ack_num = num
+
+	# ADD remove_ack
+
+	def insert_data(self, data): # "data" replaces self.data
+		self.data = data
+

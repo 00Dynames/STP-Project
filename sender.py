@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import socket, sys, time, message, random
+import socket, sys, time, message, random, pld
 
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sender_socket.settimeout(1)
@@ -11,7 +11,7 @@ sender = {"reciever_ip":str(sys.argv[1]),
                "MWS":int(sys.argv[4]),
                "MSS":int(sys.argv[5]),
                "timeout":str(sys.argv[6]),
-               "pdrop":str(sys.argv[7]),
+               "pdrop":float(sys.argv[7]),
                "seed":str(sys.argv[8]),
 			   "isn": 0,
 			   "csn": 0
@@ -25,6 +25,9 @@ reciever = {"connected":False,
   	        "address":(sender["reciever_ip"], sender["reciever_port"]),
   			"isn": 0
 		   }
+
+sender_pld = pld.Pld(sender["pdrop"])
+
 
 """
 Make connection -> handshake
@@ -59,7 +62,6 @@ if sender["csn"] - sender["isn"] == 1:
 	print "===> SEND FILE <==="
 
 
-
 """
 Send file
 """
@@ -82,8 +84,10 @@ while True:
 
 	try:
 		start = time.time()
-		sender_socket.sendto(mess.segment(), reciever["address"])
 		
+		#sender_socket.sendto(mess.segment(), reciever["address"])
+		sender_pld.send(sender_socket, mess, reciever) # send with pld module
+
 		data, server = sender_socket.recvfrom(reciever["address"][1])
 
 		end = time.time()
