@@ -8,7 +8,7 @@ def main():
     sender = {"connected":False, "port":0, "isn": 0, "csn":0}
     reciever = {"isn": int(random.random() * 10000)}
 
-    #out = open("test_out.txt", "w+") 
+    out = open("test_out.txt", "w+") 
 
     """
     Bind socket
@@ -73,7 +73,7 @@ def main():
                 reciever_socket.sendto(mess.segment(), addr) # send ack
                 break
     
-        
+            out.write(mess.data)
             print mess.segment() 
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
             reciever_socket.sendto(mess.segment(), addr)
@@ -114,6 +114,8 @@ def main():
 
 
     reciever_socket.close()
+
+    out.close()
 
 if __name__ == "__main__":
     main()
