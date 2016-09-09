@@ -135,16 +135,20 @@ def main():
         try:
             if fin_start:
                 print "fin start"
-                mess = message.Message([reciever["address"][1], sender["csn"], 0,"", "FIN"]) # NEED TO ONLY SEND ONCE
+                mess = message.Message([reciever["address"][1], sender["csn"], reciever["isn"], "", "FIN"]) # send initial fin
                 sender_socket.sendto(mess.segment(), reciever["address"]) # send initial fin
-        
+                log_packet(out_file, mess, "snd", time.time() - timer_start)
+
             data, server = sender_socket.recvfrom(reciever["address"][1])
             mess.parse_segment(data)
-        
+            log_packet(out_file, mess, "rcv", time.time() - timer_start)
+
             if mess.response["FIN"]: # recieve reciever fin
                 print "fin recieved"
                 mess.parse_segment("%s:%s:%s:%s:%s" % (reciever["address"][1], 0, reciever["isn"] + 1, "", "ACK"))
                 sender_socket.sendto(mess.segment(), reciever["address"]) # send ack to reciever
+                log_packet(out_file, mess, "snd", time.time() - timer_start)
+
                 fin_start = False            
                 print reciever["isn"] + 1 
                 time.sleep(2)
