@@ -30,7 +30,7 @@ def main():
     sender["isn"] = int(random.random() * 13400) # 134 is random
 
     reciever = {"connected":False, 
-                 "address":(sender["reciever_ip"], sender["reciever_port"]),
+                 "address":(sender["reciever_ip"], sender["reciever_port"]), # data is duplicated but makes more sense to group reciever data outside of the sender hash
                  "isn": 0
                }
 

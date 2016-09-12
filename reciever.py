@@ -3,13 +3,15 @@
 import socket, sys, message, random, time
  
 def main(): 
-    HOST = '127.0.0.1'
-    PORT = int(sys.argv[1])
+    
     sender = {"connected":False, "port":0, "isn": 0, "csn":0}
-    reciever = {"isn": int(random.random() * 10000), 
+    reciever = {"IP": '127.0.0.1',
+                "port": int(sys.argv[1]),
+                "isn": int(random.random() * 10000), 
                 "data_recieved": 0,
                 "seg_recieved": 0,
-                "dup_recieved": 0 
+                "dup_recieved": 0, 
+                "buffer": []
                }
 
     out_file = open("file.txt", "w+") 
@@ -23,7 +25,7 @@ def main():
     """
     try :
         reciever_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        reciever_socket.bind((HOST, PORT))
+        reciever_socket.bind((reciever["IP"], reciever["port"]))
         reciever_socket.settimeout(1)
     except socket.error , msg:
         print 'failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
@@ -35,7 +37,7 @@ def main():
     while not sender["connected"]:
 
         try:
-            data, addr = reciever_socket.recvfrom(PORT)
+            data, addr = reciever_socket.recvfrom(reciever["port"])
             mess.parse_segment(data)
 
             if data:
