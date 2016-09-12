@@ -154,7 +154,7 @@ def main():
         except socket.timeout:
             pass
 
-    text_fileclose()
+    text_file.close()
     print "sent"
 
 """
