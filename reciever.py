@@ -1,14 +1,22 @@
 #!/usr/bin/python
 
-import socket, sys, message, random
+import socket, sys, message, random, time
  
 def main(): 
     HOST = '127.0.0.1'
     PORT = int(sys.argv[1])
     sender = {"connected":False, "port":0, "isn": 0, "csn":0}
-    reciever = {"isn": int(random.random() * 10000)}
+    reciever = {"isn": int(random.random() * 10000), 
+                "data_recieved": 0,
+                "seg_recieved": 0,
+                "dup_recieved": 0 
+               }
 
-    out = open("test_out.txt", "w+") 
+    out_file = open("file.txt", "w+") 
+    log_file = open("reciever_log.txt", "w+")
+
+    timer_start = time.time()
+    mess = message.Message([]) # Initialise message object
 
     """
     Bind socket
@@ -22,20 +30,22 @@ def main():
         sys.exit()
 
     """
-    
+    Connect to sender
     """
     while not sender["connected"]:
 
         try:
             data, addr = reciever_socket.recvfrom(PORT)
-    
-            mess = message.Message([]) 
             mess.parse_segment(data)
+
+            if data:
+                log_packet(log_file, mess, "rcv", time.time() - timer_start)
 
             print mess.segment() 
 
             if mess.response["ACK"] and sender["port"] != 0 and mess.ack_num == reciever["isn"] + 1:
                 sender["connected"] = True
+                reciever["isn"] += 1
                 print "Connection made + ", sender["connected"]
                 break
             elif mess.response["SYN"] and sender["port"] != 0: # syn segment sent when connected
@@ -48,6 +58,7 @@ def main():
                 mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"], "", "ACK", "SYN"))  # no source port, SYN-ACK segment
                 print mess.response["SYN"], mess.response["ACK"]
                 reciever_socket.sendto(mess.segment(), addr)
+                log_packet(log_file, mess, "snd", time.time() - timer_start)
 
         except socket.timeout:
             print "timeout"
@@ -66,20 +77,25 @@ def main():
             data, addr = reciever_socket.recvfrom(2200)
 
             mess.parse_segment(data)
+            log_packet(log_file, mess, "rcv", time.time() - timer_start)
+            
+            
             sender["csn"] = mess.seq_num
-
+            
             if mess.response["FIN"]: # acknowledge sender fin
                 mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + 1, "", "ACK"))
                 reciever_socket.sendto(mess.segment(), addr) # send ack
+                log_packet(log_file, mess, "snd", time.time() - timer_start)
                 break
     
-            out.write(mess.data)
+            out_file.write(mess.data)
             print mess.segment() 
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
             reciever_socket.sendto(mess.segment(), addr)
+            log_packet(log_file, mess, "snd", time.time() - timer_start)
             #print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
         except socket.timeout:
-            print "timeout"
+           print "timeout"
 
     print "===> CLOSING CONNECTION <==="
     print sender["connected"]
@@ -95,12 +111,14 @@ def main():
         try: # send reciever fin
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, reciever["isn"], "", "FIN"))
             reciever_socket.sendto(mess.segment(), addr)
+            log_packet(log_file, mess, "snd", time.time() - timer_start)
         
             data, addr = reciever_socket.recvfrom(2200)
             mess.parse_segment(data)
-
+            log_packet(log_file, mess, "rcv", time.time() - timer_start)
+                
             print reciever["isn"]
-            if mess.response["ACK"] and mess.ack_num == reciever["isn"] + 2: # recieve ack
+            if mess.response["ACK"] and mess.ack_num == reciever["isn"] + 1: # recieve ack
                 print "CLOSE"
                 sender["connected"] = False
 
@@ -115,7 +133,18 @@ def main():
 
     reciever_socket.close()
 
-    out.close()
+    out_file.close()
+    log_file.close()
+
+
+def log_packet(log_file, message, ptype, time):
+
+    mtype = ""
+    for res in message.response: # Check packet type          
+        if message.response[res]:
+            mtype += res[0]
+    
+    log_file.write("%s %.3f %s %d %d %d\n" % (ptype, time, mtype, message.seq_num, len(message.data), message.ack_num))
 
 if __name__ == "__main__":
-    main()
+    main() 
