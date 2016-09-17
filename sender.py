@@ -15,7 +15,7 @@ def main():
               "pdrop":float(sys.argv[7]),
               "seed":str(sys.argv[8]),
               "isn": 0,
-              "csn": 0,
+              "csn": 0, # updated each time an ACK packet is received
               "status": 
                   {"data_transfered": 0,
                    "data_seg_sent": 0,
@@ -79,20 +79,29 @@ def main():
     """
 
     text_file = open(sender["file"], "r")
-    window = {"start":0, "end":0}
+    window = {}
     file_size = len(text_file.read())
     text_file.seek(0)
 
     while True:
 
+        # set csn to first seq-num in window
+
         #print text_file.read(sender["MSS"]), random.random()
         print text_file.tell()
+               
 
         text_file.seek(sender["csn"] - sender["isn"] - 1) # seek to position given by last seq_num
 
         mess = message.Message([reciever["address"][1], sender["csn"], reciever["isn"], text_file.read(sender["MSS"]), "ACK"])
 
         try:
+            if text_file.tell() == file_size:
+                print "END"
+                break
+            else:         
+                print make_window(text_file, file_size, sender, reciever)
+ 
             start = time.time()
         
             #sender_socket.sendto(mess.segment(), reciever["address"])
@@ -111,9 +120,6 @@ def main():
                 sender["csn"] = mess.ack_num
 
             time.sleep(1 - (time.time() - start)) # send 1 packet/second
-
-            if text_file.tell() == file_size:
-                break
 
         except socket.timeout:
             print "timeout"
@@ -170,5 +176,34 @@ def log_packet(log_file, message, ptype, time):
 
     log_file.write("%s %.3f %s %d %d %d\n" % (ptype, time, mtype, message.seq_num, len(message.data), message.ack_num))
 
+"""
+Make a window of packets to send
+"""
+def make_window(text_file, file_size, sender, reciever): 
+
+    window = {}
+    window_size = 0
+    packet = message.Message([])
+    window_csn = sender["csn"] 
+    text_file.seek(sender["csn"] - sender["isn"] - 1) 
+
+    while window_size < sender["MWS"]:
+   
+        packet.parse_segment("%s:%s:%s:%s:%s" % (reciever["address"][1], window_csn, reciever["isn"], text_file.read(sender["MSS"]), "ACK"))
+         
+        if text_file.tell() == file_size:
+            break
+        elif window_size + len(packet.data) >= sender["MWS"]: # or window_size + sender["MSS"] >= sender["MWS"]:
+            break
+        
+        window[str(packet.seq_num)] = packet
+        window_size += len(packet.data)
+        window_csn += len(packet.data)
+     
+    return window
+
+
+
+
 if __name__ == "__main__":
-    main()
+     main()

@@ -16,10 +16,8 @@ class Pld:
 		print str(rand) + " ~ " + str(self.pdrop)
 
 		if rand > self.pdrop:
-			print "SENEEEEEDDD"
-			socket.sendto(message.segment(), reciever["address"]) #: send SYN segment
+			socket.sendto(message.segment(), reciever["address"]) #: send ACK dataa segment
 			return True
 		else:
-			print "NOPE"
 			return False
 

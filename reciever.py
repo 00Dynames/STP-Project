@@ -14,7 +14,7 @@ def main():
                 "buffer": []
                }
 
-    out_file = open("file.txt", "w+") 
+    out_file = open(sys.argv[2], "w+") 
     log_file = open("reciever_log.txt", "w+")
 
     timer_start = time.time()
