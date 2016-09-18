@@ -44,31 +44,22 @@ def main():
             if data:
                 log_packet(log_file, mess, "rcv", time.time() - timer_start)
 
-            print mess.segment() 
-
             if mess.response["ACK"] and sender["port"] != 0 and mess.ack_num == reciever["isn"] + 1:
                 sender["connected"] = True
                 reciever["isn"] += 1
-                print "Connection made + ", sender["connected"]
                 break
             elif mess.response["SYN"] and sender["port"] != 0: # syn segment sent when connected
                 pass
             elif mess.response["SYN"] and sender["port"] == 0: # does not check ACK flag
-                print "start connecting"
                 sender["port"] = addr[1]
                 sender["isn"] = mess.seq_num
                 sender["csn"] = mess.seq_num + 1
                 mess.parse_segment("%s:%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"], "", "ACK", "SYN"))  # no source port, SYN-ACK segment
-                print mess.response["SYN"], mess.response["ACK"]
                 reciever_socket.sendto(mess.segment(), addr)
                 log_packet(log_file, mess, "snd", time.time() - timer_start)
 
         except socket.timeout:
-            print "timeout"
-     
-    print "==> RECIEVE FILE <==="
-
-    # scrape sender ip and/or port from UDP header
+            pass
 
     """
     Recieve file
@@ -91,7 +82,6 @@ def main():
                 log_packet(log_file, mess, "snd", time.time() - timer_start)
                 break
     
-            #out_file.write(mess.data)
             if str(mess.seq_num) not in reciever["buffer"].keys(): 
                 reciever["buffer"][str(mess.seq_num)] = mess.data
             
@@ -103,27 +93,18 @@ def main():
             else:
                 reciever["dup_recieved"] += 1
 
-            print mess.segment() 
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
             reciever_socket.sendto(mess.segment(), addr)
             log_packet(log_file, mess, "snd", time.time() - timer_start)
-            #print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
         except socket.timeout:
            reciever_socket.sendto(mess.segment(), addr)
            log_packet(log_file, mess, "snd", time.time() - timer_start)
 
-           print "timeout"
-
-    print "===> CLOSING CONNECTION <==="
-    print sender["connected"]
     """
     Close connection
     """
 
     while sender["connected"]:
-
-
-        print "closing connection"
 
         try: # send reciever fin
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], 0, reciever["isn"], "", "FIN"))
@@ -134,37 +115,27 @@ def main():
             mess.parse_segment(data)
             log_packet(log_file, mess, "rcv", time.time() - timer_start)
                 
-            print reciever["isn"]
             if mess.response["ACK"] and mess.ack_num == reciever["isn"] + 1: # recieve ack
-                print "CLOSE"
                 sender["connected"] = False
 
-
-
         except socket.timeout:
-            print "timeout"
+            pass
      
-
-
-    print "========"
-
     order = reciever["buffer"].keys()
     for i in range(len(order)):
         order[i] = int(order[i])
 
     order = sorted(order)
-    print order
     
     for i in order:
-        print i, reciever["buffer"][str(i)]
         out_file.write(reciever["buffer"][str(i)])
 
     reciever_socket.close()
-
     out_file.close()
+   
+    log_file.write("\ndata recieved: %d, data segments recieved: %d, duplicate segments recieved: %d" % (reciever["data_recieved"], reciever["seg_recieved"], reciever["dup_recieved"]))
     log_file.close()
-    print reciever
-
+    
 def log_packet(log_file, message, ptype, time):
 
     mtype = ""
