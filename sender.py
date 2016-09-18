@@ -115,6 +115,8 @@ def main():
                     log_packet(log_file, mess, "drop", time.time() - timer_start)
                 else:
                     log_packet(log_file, mess, "snd", time.time() - timer_start)
+         
+         
             print range(len(window))
             for rcv in range(len(window)):
                 data, server = sender_socket.recvfrom(reciever["address"][1]) # recieve ack
@@ -125,13 +127,13 @@ def main():
                 if mess.response["ACK"] and mess.ack_num == sender["csn"] + sender["MSS"]:
                     sender["csn"] = mess.ack_num
 
-            time.sleep(1 - (time.time() - start)) # send 1 packet/second
     
-            print "==="
+          
         
             if text_file.tell() == file_size:
                 break
- 
+            time.sleep(1 - (time.time() - start)) # send 1 packet/second
+
         except socket.timeout:
             print "timeout"
 
@@ -203,8 +205,6 @@ def make_window(text_file, file_size, sender, reciever):
 
         packet.parse_segment("%s:%s:%s:%s:%s" % (reciever["address"][1], window_csn, reciever["isn"], text_file.read(sender["MSS"]), "ACK"))
 
-        if text_file.tell() == file_size:
-            break
         if window_size + len(packet.data) > sender["MWS"]: 
             break
         
@@ -213,6 +213,8 @@ def make_window(text_file, file_size, sender, reciever):
         window[str(packet.seq_num)] = packet
         window_size += len(packet.data)
         window_csn += len(packet.data)
+        if text_file.tell() == file_size:
+            break
 
     return window
 

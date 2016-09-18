@@ -145,7 +145,7 @@ def main():
     
     for i in order:
         print i, reciever["buffer"][str(i)]
-
+        out_file.write(reciever["buffer"][str(i)])
 
     reciever_socket.close()
 
