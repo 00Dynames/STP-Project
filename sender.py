@@ -18,14 +18,15 @@ def main():
               "csn": 0, # updated each time an ACK packet is received
               "status": 
                   {"data_transfered": 0,
-                   "data_seg_sent": 0,
+                   "data_seg_sent": [],
                    "data_dropped": 0,
                    "data_delayed": 0,
                    "seg_retransmitted": 0,
-                   "dup_acks": 0
+                   "dup_acks": 0,
+                   "acks": []
                   }
              }
-
+    
     random.seed(sender["seed"]) # set seed
     sender["isn"] = int(random.random() * 13400) # 134 is random
 
@@ -93,6 +94,7 @@ def main():
         #print text_file.read(sender["MSS"]), random.random()
         #print text_file.tell()
                
+        print "=> " + str(sender["csn"])
 
         text_file.seek(sender["csn"] - sender["isn"] - 1) # seek to position given by last seq_num
 
@@ -100,30 +102,50 @@ def main():
 
         try:
             window = make_window(window_file, file_size, sender, reciever)
-
+            print "new window"
             start = time.time()
-        
+            
             #sender_socket.sendto(mess.segment(), reciever["address"])
             #sent = sender_pld.send(sender_socket, mess, reciever) # send with pld module in stop and wait protocol
             #print window
             for packet in window:
-
-                #print window[packet].segment()
+                print packet
+                print sender["status"]["data_seg_sent"]
+                
+                #if window[packet].seq_num in sender["status"]["data_seg_sent"]:
+                #    continue
+                #print "========================================================================"
+          
+                    
+             
                 sent = sender_pld.send(sender_socket, window[packet], reciever)
+                sender["status"]["data_transfered"] += len(window[packet].data)
+                if not window[packet].seq_num in sender["status"]["data_seg_sent"]:
+                    sender["status"]["data_seg_sent"].append(window[packet].seq_num)
+                else:
+                    sender["status"]["seg_retransmitted"] += 1
 
                 if not sent:
                     log_packet(log_file, mess, "drop", time.time() - timer_start)
+                    sender["status"]["data_dropped"] += 1
                 else:
                     log_packet(log_file, mess, "snd", time.time() - timer_start)
-         
+                #else:
+                 #   sender["status"]["seg_retransmitted"] += 1
          
             print range(len(window))
-            for rcv in range(len(window)):
+            for i in range(len(window)):
                 data, server = sender_socket.recvfrom(reciever["address"][1]) # recieve ack
                 print data
                 mess.parse_segment(data)
                 log_packet(log_file, mess, "rcv", time.time() - timer_start)
         
+                if not mess.ack_num in sender["status"]["acks"]:
+                    sender["status"]["acks"].append(mess.ack_num)  
+                else:
+                    print "++++"
+                    sender["status"]["dup_acks"] += 1
+
                 if mess.response["ACK"] and mess.ack_num == sender["csn"] + sender["MSS"]:
                     sender["csn"] = mess.ack_num
 
@@ -132,8 +154,9 @@ def main():
         
             if text_file.tell() == file_size:
                 break
-            time.sleep(1 - (time.time() - start)) # send 1 packet/second
-
+            print start
+            #time.sleep(1 - (time.time() - start)) # send 1 packet/second, causing invalid argument issues
+            time.sleep(0.7)
         except socket.timeout:
             print "timeout"
 
@@ -175,6 +198,7 @@ def main():
 
     text_file.close()
     print "sent"
+    print sender["status"]
 
 """
 Write packet status to log file
@@ -208,8 +232,6 @@ def make_window(text_file, file_size, sender, reciever):
         if window_size + len(packet.data) > sender["MWS"]: 
             break
         
-        print packet.data
-
         window[str(packet.seq_num)] = packet
         window_size += len(packet.data)
         window_csn += len(packet.data)

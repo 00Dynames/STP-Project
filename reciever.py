@@ -11,7 +11,8 @@ def main():
                 "data_recieved": 0,
                 "seg_recieved": 0,
                 "dup_recieved": 0, 
-                "buffer": {}
+                "buffer": {},
+                "seg": []
                }
 
     out_file = open(sys.argv[2], "w+") 
@@ -91,15 +92,26 @@ def main():
                 break
     
             #out_file.write(mess.data)
+            if str(mess.seq_num) not in reciever["buffer"].keys(): 
+                reciever["buffer"][str(mess.seq_num)] = mess.data
             
-            reciever["buffer"][str(mess.seq_num)] = mess.data
+            reciever["data_recieved"] += len(mess.data)
+            reciever["seg_recieved"] += 1
             
+            if not mess.seq_num in reciever["seg"]:
+                reciever["seg"].append(mess.seq_num)
+            else:
+                reciever["dup_recieved"] += 1
+
             print mess.segment() 
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
             reciever_socket.sendto(mess.segment(), addr)
             log_packet(log_file, mess, "snd", time.time() - timer_start)
             #print 'Message[' + addr[0] + ':' + str(addr[1]) + '] - ' + data.strip()
         except socket.timeout:
+           reciever_socket.sendto(mess.segment(), addr)
+           log_packet(log_file, mess, "snd", time.time() - timer_start)
+
            print "timeout"
 
     print "===> CLOSING CONNECTION <==="
@@ -151,7 +163,7 @@ def main():
 
     out_file.close()
     log_file.close()
-
+    print reciever
 
 def log_packet(log_file, message, ptype, time):
 
