@@ -11,7 +11,7 @@ def main():
                 "data_recieved": 0,
                 "seg_recieved": 0,
                 "dup_recieved": 0, 
-                "buffer": []
+                "buffer": {}
                }
 
     out_file = open(sys.argv[2], "w+") 
@@ -90,7 +90,10 @@ def main():
                 log_packet(log_file, mess, "snd", time.time() - timer_start)
                 break
     
-            out_file.write(mess.data)
+            #out_file.write(mess.data)
+            
+            reciever["buffer"][str(mess.seq_num)] = mess.data
+            
             print mess.segment() 
             mess.parse_segment("%s:%s:%s:%s:%s" % (sender["port"], reciever["isn"], sender["csn"] + len(mess.data), "", "ACK"))  # no source port, SYN-ACK segment
             reciever_socket.sendto(mess.segment(), addr)
@@ -131,6 +134,17 @@ def main():
      
 
 
+    print "========"
+
+    order = reciever["buffer"].keys()
+    for i in range(len(order)):
+        order[i] = int(order[i])
+
+    order = sorted(order)
+    print order
+    
+    for i in order:
+        print i, reciever["buffer"][str(i)]
 
 
     reciever_socket.close()

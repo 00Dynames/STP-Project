@@ -13,7 +13,6 @@ class Pld:
 	def send(self, socket, message, reciever):
 
 		rand = random.random()
-		print str(rand) + " ~ " + str(self.pdrop)
 
 		if rand > self.pdrop:
 			socket.sendto(message.segment(), reciever["address"]) #: send ACK dataa segment

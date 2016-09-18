@@ -79,16 +79,19 @@ def main():
     """
 
     text_file = open(sender["file"], "r")
+    
+    window_file = open(sender["file"], "r")
+
     window = {}
     file_size = len(text_file.read())
     text_file.seek(0)
 
     while True:
 
-        # set csn to first seq-num in window
+        # csn -> the most recent ack
 
         #print text_file.read(sender["MSS"]), random.random()
-        print text_file.tell()
+        #print text_file.tell()
                
 
         text_file.seek(sender["csn"] - sender["isn"] - 1) # seek to position given by last seq_num
@@ -96,31 +99,39 @@ def main():
         mess = message.Message([reciever["address"][1], sender["csn"], reciever["isn"], text_file.read(sender["MSS"]), "ACK"])
 
         try:
-            if text_file.tell() == file_size:
-                print "END"
-                break
-            else:         
-                print make_window(text_file, file_size, sender, reciever)
- 
+            window = make_window(window_file, file_size, sender, reciever)
+
             start = time.time()
         
             #sender_socket.sendto(mess.segment(), reciever["address"])
-            sent = sender_pld.send(sender_socket, mess, reciever) # send with pld module
+            #sent = sender_pld.send(sender_socket, mess, reciever) # send with pld module in stop and wait protocol
+            #print window
+            for packet in window:
 
-            if not sent:
-                log_packet(log_file, mess, "drop", time.time() - timer_start)
-            else:
-                log_packet(log_file, mess, "snd", time.time() - timer_start)
+                #print window[packet].segment()
+                sent = sender_pld.send(sender_socket, window[packet], reciever)
 
-            data, server = sender_socket.recvfrom(reciever["address"][1]) # recieve ack
-            mess.parse_segment(data)
-            log_packet(log_file, mess, "rcv", time.time() - timer_start)
+                if not sent:
+                    log_packet(log_file, mess, "drop", time.time() - timer_start)
+                else:
+                    log_packet(log_file, mess, "snd", time.time() - timer_start)
+            print range(len(window))
+            for rcv in range(len(window)):
+                data, server = sender_socket.recvfrom(reciever["address"][1]) # recieve ack
+                print data
+                mess.parse_segment(data)
+                log_packet(log_file, mess, "rcv", time.time() - timer_start)
         
-            if mess.response["ACK"] and mess.ack_num == sender["csn"] + sender["MSS"]:
-                sender["csn"] = mess.ack_num
+                if mess.response["ACK"] and mess.ack_num == sender["csn"] + sender["MSS"]:
+                    sender["csn"] = mess.ack_num
 
             time.sleep(1 - (time.time() - start)) # send 1 packet/second
-
+    
+            print "==="
+        
+            if text_file.tell() == file_size:
+                break
+ 
         except socket.timeout:
             print "timeout"
 
@@ -183,24 +194,28 @@ def make_window(text_file, file_size, sender, reciever):
 
     window = {}
     window_size = 0
-    packet = message.Message([])
     window_csn = sender["csn"] 
-    text_file.seek(sender["csn"] - sender["isn"] - 1) 
-
+    
     while window_size < sender["MWS"]:
-   
+        
+        packet = message.Message([])
+        text_file.seek(window_csn - sender["isn"] - 1) 
+
         packet.parse_segment("%s:%s:%s:%s:%s" % (reciever["address"][1], window_csn, reciever["isn"], text_file.read(sender["MSS"]), "ACK"))
-         
+
         if text_file.tell() == file_size:
             break
-        elif window_size + len(packet.data) >= sender["MWS"]: # or window_size + sender["MSS"] >= sender["MWS"]:
+        if window_size + len(packet.data) > sender["MWS"]: 
             break
         
+        print packet.data
+
         window[str(packet.seq_num)] = packet
         window_size += len(packet.data)
         window_csn += len(packet.data)
-     
+
     return window
+
 
 
 

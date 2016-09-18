@@ -1,4 +1,4 @@
 #!/bin/bash
 
-./reciever.py 2200 test_out.txt
+./reciever.py 2200 file.txt
 
